@@ -1,0 +1,1766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Workspace — CCaaS POC</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#f6f7f9;font-family:'Open Sans',system-ui,sans-serif}
+/* Outer shell */
+.shell{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+/* Top chrome bar */
+.chrome{height:44px;background:#f6f7f9;border-bottom:1px solid #eaecf0;display:flex;align-items:center;padding:0 16px;gap:8px;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
+.chrome-logo{width:28px;height:28px;background:#0ea5e9;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer}
+.chrome-title{display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:background 0.15s}
+.chrome-title:hover{background:#f1f5f9}
+.chrome-title span{font-size:14px;font-weight:600;color:#0f172a}
+.chrome-sp{flex:1}
+.chrome-btn{width:32px;height:32px;border:none;background:transparent;border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#64748b;transition:all 0.15s;position:relative;font-family:inherit}
+.chrome-btn:hover{background:#f1f5f9;color:#0f172a}
+.chrome-notif{position:absolute;top:3px;right:3px;width:16px;height:16px;background:#ef4444;border-radius:50%;font-size:9px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;border:2px solid #fff;pointer-events:none}
+.chrome-av{width:30px;height:30px;border-radius:50%;background:#0ea5e9;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;cursor:pointer;letter-spacing:0.02em;border:2px solid #e0f2fe;flex-shrink:0}
+/* App area sits inside .shell below chrome */
+.app{display:flex;flex:1;font-size:13px;background:#f6f7f9;gap:8px;overflow:hidden;min-height:0;padding:8px 8px 8px 8px}
+/* Queue */
+.queue{width:204px;background:#f7f9fc;display:flex;flex-direction:column;flex-shrink:0;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08),0 0 0 1px rgba(0,0,0,0.05)}
+.qh{padding:11px 12px 9px;font-size:10px;font-weight:700;color:#64748b;letter-spacing:0.07em;text-transform:uppercase;border-bottom:1px solid #e8edf3;background:#f7f9fc}
+.qstat{display:flex;align-items:center;gap:7px;padding:8px 12px;background:#fff;border-bottom:1px solid #e8edf3}
+.sdot{width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0}
+.slbl{font-size:11px;color:#16a34a;font-weight:600}
+.qi{flex:1;overflow-y:auto;padding:8px}
+.qc{background:#fff;border:1px solid #e4eaf2;border-left:3px solid transparent;border-radius:8px;padding:10px;margin-bottom:6px;cursor:pointer;transition:all 0.15s}
+.qc:hover{border-color:#94c5e8}
+.qc.sel{border-color:#0ea5e9;border-left-color:#0ea5e9;background:#f0f9ff}
+.qc.ring{border-left-color:#16a34a;background:#f0fdf4}
+.qt{font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.qt.v{color:#16a34a}.qt.e{color:#7c3aed}.qt.c{color:#0ea5e9}.qt.s{color:#d97706}
+.qn{font-size:13px;font-weight:600;color:#0f172a;margin-bottom:1px}
+.qsub{font-size:11px;color:#94a3b8}
+.qbadge{display:inline-flex;align-items:center;gap:4px;background:#dcfce7;color:#15803d;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;margin-top:5px}
+/* Workspace column (right of queue) */
+.workspace{flex:1;display:flex;flex-direction:column;min-width:0;gap:8px}
+/* Unified topbar spanning main + panel */
+.topbar{height:48px;background:#fff;display:flex;align-items:center;padding:0 14px;gap:5px;flex-shrink:0;border-bottom:none;position:relative;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08),0 0 0 1px rgba(0,0,0,0.05)}
+.topbar-divider{width:1px;height:22px;background:#e2e8f0;flex-shrink:0;margin:0 3px}
+.topbar-spacer{flex:1}
+/* workspace-body = main + panel */
+.workspace-body{flex:1;display:flex;min-height:0;gap:8px;position:relative}
+/* Panel tab icons in topbar (right side) */
+.ptab{width:34px;height:34px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#94a3b8;border-radius:7px;transition:all 0.15s;font-family:inherit;flex-shrink:0}
+.ptab:hover{color:#64748b;background:#f1f5f9}
+.ptab.act{color:#0ea5e9;background:#eff6ff}
+.panel-btn-group{position:absolute;top:10px;right:10px;z-index:20;display:flex;gap:4px}
+.panel-pill-btn,.panel-expand-btn{display:flex;align-items:center;gap:5px;height:26px;padding:0 10px 0 8px;border:1px solid #e4eaf2;border-radius:20px;background:#fff;cursor:pointer;font-size:11px;font-weight:600;color:#64748b;transition:all 0.15s;font-family:inherit;box-shadow:0 1px 4px rgba(0,0,0,0.08);white-space:nowrap}
+.panel-pill-btn:hover,.panel-expand-btn:hover{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8;box-shadow:0 2px 8px rgba(29,78,216,0.12)}
+.panel-expand-btn.active{background:#1d4ed8;border-color:#1d4ed8;color:#fff;box-shadow:0 2px 8px rgba(29,78,216,0.25)}
+/* Floating panel */
+.float-panel{position:fixed;z-index:400;background:#fff;border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,0.18),0 0 0 1px rgba(0,0,0,0.06);display:flex;flex-direction:column;overflow:hidden;min-width:280px;min-height:200px;resize:both}
+.float-chrome{height:42px;background:#f8fafc;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;padding:0 10px 0 14px;gap:8px;cursor:move;flex-shrink:0;user-select:none}
+.float-chrome-title{font-size:13px;font-weight:600;color:#0f172a;flex:1;pointer-events:none}
+.float-chrome-btn{width:28px;height:28px;border:1px solid #e4eaf2;border-radius:7px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#64748b;transition:all 0.15s;font-family:inherit;flex-shrink:0}
+.float-chrome-btn:hover{background:#f1f5f9;color:#0f172a}
+.float-chrome-btn.dock:hover{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8}
+.float-chrome-btn.cls:hover{background:#fee2e2;border-color:#fecaca;color:#ef4444}
+.float-body{flex:1;overflow-y:auto;overflow-x:hidden}
+.float-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#94a3b8;gap:10px;padding:24px;text-align:center}
+.float-empty-icon{color:#d1d9e3}
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;background:#fff;min-width:0;position:relative;transition:all 0.22s cubic-bezier(0.4,0,0.2,1);border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08),0 0 0 1px rgba(0,0,0,0.05)}
+.main.hidden{display:none}
+.omenu-item{display:flex;align-items:center;gap:9px;padding:8px 14px;font-size:12px;color:#374151;cursor:pointer;transition:background 0.12s}
+.omenu-item:hover{background:#f1f5f9}
+.omenu-item svg{flex-shrink:0}
+.cbar{height:40px;background:#fff;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;padding:0 14px;gap:8px;flex-shrink:0}
+.cid{font-size:12px;font-weight:700;color:#0f172a;background:#f1f5f9;padding:4px 10px;border-radius:6px;border:1px solid #e4eaf2;white-space:nowrap}
+.csub{font-size:11px;color:#94a3b8;flex:1;margin-left:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctrls{display:flex;align-items:center;gap:3px}
+.cb{height:30px;padding:0 10px;border:1px solid #e4eaf2;border-radius:6px;background:#fff;cursor:pointer;font-size:11px;font-weight:500;color:#374151;display:flex;align-items:center;gap:5px;transition:all 0.15s;white-space:nowrap;font-family:inherit}
+.cb:hover{background:#f8fafc;border-color:#c0ccd8}
+.cb.mt{background:#fef3c7;border-color:#f59e0b;color:#92400e}
+.cb.hd{background:#ede9fe;border-color:#8b5cf6;color:#5b21b6}
+.cb.end{background:#ef4444;border-color:#ef4444;color:#fff}
+.cb.end:hover{background:#dc2626}
+.cb:disabled{opacity:0.45;cursor:not-allowed}
+.ctimer{font-size:13px;font-weight:700;color:#16a34a;background:#f0fdf4;padding:4px 10px;border-radius:6px;font-variant-numeric:tabular-nums;margin-left:2px;letter-spacing:0.02em}
+.ctimer.done{color:#94a3b8;background:#f1f5f9}
+.chtabs{display:flex;border-bottom:1px solid #f1f5f9;padding:0 14px;flex-shrink:0;background:#fff}
+.cht{padding:9px 13px;font-size:12px;font-weight:500;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;display:flex;align-items:center;gap:5px}
+.cht:hover{color:#0f172a}
+.cht.act{color:#0ea5e9;border-bottom-color:#0ea5e9;font-weight:600}
+.cbadge{background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:10px;line-height:1.4}
+.ibody{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:#f8fafc}
+.tmsg{display:flex;gap:10px}
+.tmsg.ag{flex-direction:row-reverse;margin-left:auto;max-width:82%}
+.tmsg.cu{max-width:82%}
+.mav{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.mav.cu{background:#dbeafe;color:#1d4ed8}
+.mav.ag{background:#dcfce7;color:#15803d}
+.mb{background:#fff;border:1px solid #e4eaf2;border-radius:12px;padding:9px 13px;font-size:13px;color:#0f172a;line-height:1.55}
+.tmsg.ag .mb{background:#eff6ff;border-color:#bfdbfe}
+.mt2{font-size:10px;color:#94a3b8;margin-top:3px}
+.tmsg.ag .mt2{text-align:right}
+.livbadge{display:flex;align-items:center;gap:6px;font-size:11px;color:#16a34a;font-weight:700;padding:7px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;margin-bottom:2px;width:fit-content}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.25}}
+.pulsed{animation:pulse 1.5s infinite}
+.sep{display:flex;align-items:center;gap:8px;padding:4px 0}
+.sepl{flex:1;height:1px;background:#e8edf3}
+.seps{font-size:10px;color:#94a3b8}
+.ibar{padding:11px 14px;border-top:1px solid #e8edf3;background:#fff;flex-shrink:0;display:flex;align-items:center;gap:8px}
+.ifield{flex:1;height:36px;border:1px solid #e4eaf2;border-radius:8px;padding:0 12px;font-size:13px;color:#0f172a;outline:none;background:#f8fafc;font-family:inherit}
+.ifield:focus{border-color:#0ea5e9;background:#fff;box-shadow:0 0 0 2px #0ea5e922}
+.sbtn{height:36px;padding:0 16px;background:#0ea5e9;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.sbtn:hover{background:#0284c7}
+/* Right panel */
+.panel{width:800px;background:#fff;display:flex;flex-direction:column;flex-shrink:0;position:relative;min-width:220px;max-width:2000px;transition:width 0.22s cubic-bezier(0.4,0,0.2,1);border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08),0 0 0 1px rgba(0,0,0,0.05)}
+.panel.expanded{width:auto;flex:1;min-width:0;max-width:none}
+.panel-resizer{position:absolute;left:0;top:0;bottom:0;width:5px;cursor:col-resize;z-index:10;display:flex;align-items:center;justify-content:center;transition:background 0.15s}
+.panel-resizer::after{content:'';position:absolute;left:2px;top:0;bottom:0;width:1px;background:#e8edf3;transition:background 0.15s,width 0.15s}
+.panel-resizer:hover::after,.panel-resizer.dragging::after{background:#0ea5e9;width:2px;left:1px}
+.pcontent{flex:1;overflow-y:auto}
+.cust-hdr{padding:16px;border-bottom:1px solid #f1f5f9}
+.cust-av{width:48px;height:48px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#1d4ed8;margin-bottom:10px}
+.cust-nm{font-size:15px;font-weight:700;color:#0f172a;margin-bottom:2px}
+.cust-co{font-size:12px;color:#64748b;margin-bottom:8px}
+.ctags{display:flex;gap:4px;flex-wrap:wrap}
+.tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;letter-spacing:0.04em}
+.tag.vip{background:#fef9c3;color:#854d0e}
+.tag.prm{background:#ede9fe;color:#5b21b6}
+.tag.ar{background:#fee2e2;color:#991b1b}
+.isec{padding:11px 16px;border-bottom:1px solid #f1f5f9}
+.ilbl{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:7px}
+.irow{display:flex;justify-content:space-between;align-items:center;padding:3px 0}
+.ik{font-size:12px;color:#64748b}
+.iv{font-size:12px;color:#0f172a;font-weight:600;text-align:right}
+.iv.lnk{color:#0ea5e9;font-weight:500;cursor:pointer}
+.iv.neg{color:#ef4444}
+.iv.pos{color:#16a34a}
+.scard{background:#f8fafc;border:1px solid #e4eaf2;border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer;transition:all 0.15s}
+.scard:hover{border-color:#0ea5e9;background:#f0f9ff}
+.stype{font-size:10px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px}
+.stxt{font-size:12px;color:#0f172a;line-height:1.55}
+.hi{padding:11px 16px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background 0.1s}
+.hi:hover{background:#f8fafc}
+.hihd{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.hitype{font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px}
+.hitype.v{color:#16a34a}.hitype.e{color:#7c3aed}.hitype.c{color:#0ea5e9}
+.hidate{font-size:11px;color:#94a3b8}
+.hidesc{font-size:12px;color:#64748b;line-height:1.4}
+.hidur{font-size:11px;color:#94a3b8;margin-top:2px}
+.di{padding:10px 16px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background 0.1s;display:flex;align-items:center;gap:10px}
+.di:hover{background:#f8fafc}
+.dav{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.dinfo{flex:1;min-width:0}
+.dn{font-size:13px;font-weight:600;color:#0f172a;margin-bottom:1px}
+.dd{font-size:11px;color:#64748b}
+.dacts{display:flex;gap:4px}
+.da{width:28px;height:28px;border-radius:6px;border:1px solid #e4eaf2;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#64748b;transition:all 0.15s;font-family:inherit}
+.da:hover{background:#f0f9ff;border-color:#0ea5e9;color:#0ea5e9}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#c8d0dc;border-radius:3px}
+.cdf{height:24px;padding:0 10px;border:1px solid #e4eaf2;border-radius:12px;background:#fff;font-size:11px;font-weight:600;color:#64748b;cursor:pointer;font-family:inherit;transition:all 0.13s}
+.cdf:hover{border-color:#0ea5e9;color:#0ea5e9}
+.cdf.act{background:#0ea5e9;border-color:#0ea5e9;color:#fff}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- Top Chrome Bar -->
+<div class="chrome">
+  <div class="chrome-logo">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M3 12c1.5-4 4-5.5 6-5.5s4.5 4.5 6 4.5 3.5-3 3.5-3"/></svg>
+  </div>
+  <div class="chrome-title">
+    <span>Agent Workspace</span>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="chrome-sp"></div>
+  <button class="chrome-btn" title="Help">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+  </button>
+  <button class="chrome-btn" title="Notifications">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    <span class="chrome-notif">5</span>
+  </button>
+  <button class="chrome-btn" title="Settings" onclick="openSettings()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+  <div class="chrome-av" title="J. Smith — Online">JS</div>
+</div>
+
+<div class="app">
+
+<!-- Queue Panel -->
+<aside class="queue">
+  <div class="qh">My Queue <span style="background:#0ea5e9;color:#fff;font-size:9px;padding:1px 6px;border-radius:10px;margin-left:4px;font-weight:700">3</span></div>
+  <div class="qstat">
+    <div class="sdot pulsed"></div>
+    <span class="slbl">Available</span>
+    <select style="margin-left:auto;font-size:10px;border:1px solid #e4eaf2;border-radius:4px;padding:2px 4px;color:#64748b;background:#fff;outline:none;cursor:pointer">
+      <option>Available</option><option>Break</option><option>Away</option><option>Busy</option>
+    </select>
+  </div>
+  <div class="qi">
+    <div class="qc ring sel" id="qc-voice" onclick="closeSettings();selQ(0,this,'voice')">
+      <div class="qt v">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.67-.36 1-.22 1.1.44 2.3.62 3.6.62.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C8.6 21 3 15.4 3 8.6c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.22 2.5.62 3.6a1 1 0 0 1-.25 1.02l-2.27 2.58z"/></svg>
+        INBOUND VOICE
+      </div>
+      <div class="qn">Margaret Chen</div>
+      <div class="qsub">+1 (415) 555-0193</div>
+      <div class="qbadge"><div style="width:6px;height:6px;border-radius:50%;background:#16a34a" class="pulsed"></div>Connected · Billing</div>
+    </div>
+    <div class="qc" id="qc-email" onclick="closeSettings();selQ(1,this,'email')">
+      <div class="qt e">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>
+        EMAIL
+      </div>
+      <div class="qn">David Patel</div>
+      <div class="qsub">Invoice dispute · #TK-5521</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:5px">Waiting 14 min</div>
+    </div>
+    <div class="qc" id="qc-chat" onclick="closeSettings();selQ(2,this,'chat')">
+      <div class="qt c">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        LIVE CHAT
+      </div>
+      <div class="qn">Aisha Williams</div>
+      <div class="qsub">App crashing · Tech support</div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:5px">Waiting 4 min</div>
+    </div>
+    <div style="padding:10px 4px 4px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.07em">Completed Today</div>
+    <div class="qc" style="opacity:0.6;cursor:default;border-left-color:transparent">
+      <div class="qt v" style="color:#94a3b8">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.67-.36 1-.22 1.1.44 2.3.62 3.6.62.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C8.6 21 3 15.4 3 8.6c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.22 2.5.62 3.6a1 1 0 0 1-.25 1.02l-2.27 2.58z"/></svg>
+        OUTBOUND VOICE
+      </div>
+      <div class="qn" style="color:#64748b">Robin Tanaka</div>
+      <div class="qsub">10:02 AM · 8m 14s</div>
+    </div>
+  </div>
+</aside>
+
+<!-- Workspace: topbar + body (main + panel) -->
+<div class="workspace">
+
+  <!-- Unified topbar -->
+  <div class="topbar" id="topbar">
+    <!-- Voice controls -->
+    <div class="ctrls" id="voice-ctrls">
+      <button class="cb" id="btn-mute" onclick="togMute()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        Mute
+      </button>
+      <button class="cb" id="btn-hold" onclick="togHold()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+        Hold
+      </button>
+      <button class="cb">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        Transfer
+      </button>
+      <button class="cb">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>
+        Conf
+      </button>
+      <button class="cb">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.5" fill="currentColor"/><circle cx="19" cy="5" r="1.5" fill="currentColor"/><circle cx="5" cy="5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="19" r="1.5" fill="currentColor"/><circle cx="5" cy="19" r="1.5" fill="currentColor"/></svg>
+        Keypad
+      </button>
+      <button class="cb outcome-btn" onclick="showOutcomeMenu(this)">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Outcome
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left:2px"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <button class="cb end" id="btn-end" onclick="endCall()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.67-.36 1-.22 1.1.44 2.3.62 3.6.62.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C8.6 21 3 15.4 3 8.6c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.22 2.5.62 3.6a1 1 0 0 1-.25 1.02l-2.27 2.58z"/></svg>
+        End Call
+      </button>
+      <div class="ctimer" id="ctimer">04:47</div>
+    </div>
+    <!-- Email controls -->
+    <div class="ctrls" id="email-ctrls" style="display:none">
+      <button class="cb">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        Transfer
+      </button>
+      <button class="cb outcome-btn" onclick="showOutcomeMenu(this)">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Outcome
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left:2px"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+    </div>
+    <!-- Outcome dropdown -->
+    <div id="outcome-menu" style="display:none;position:absolute;top:100%;left:14px;background:#fff;border:1px solid #e4eaf2;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.10);z-index:50;min-width:210px;padding:6px 0">
+      <div style="padding:8px 14px 6px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.07em">Select Outcome</div>
+      <div class="omenu-item" onclick="pickOutcome('Resolved — no further action')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Resolved — no further action</div>
+      <div class="omenu-item" onclick="pickOutcome('Pending — awaiting customer')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Pending — awaiting customer</div>
+      <div class="omenu-item" onclick="pickOutcome('Escalated to billing team')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2.5"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/></svg>Escalated to billing team</div>
+      <div class="omenu-item" onclick="pickOutcome('Refund approved')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Refund approved</div>
+      <div class="omenu-item" onclick="pickOutcome('Closed — duplicate')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Closed — duplicate</div>
+    </div>
+
+    <!-- Spacer pushes tabs right -->
+    <div class="topbar-spacer"></div>
+    <div class="topbar-divider"></div>
+
+    <!-- Panel tabs pinned right -->
+    <button class="ptab act" onclick="swP('cust',0)" title="Customer Profile">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    </button>
+    <button class="ptab" onclick="swP('ai',1)" title="AI Assist">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+    </button>
+    <button class="ptab" onclick="swP('hist',2)" title="Interaction History">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+    </button>
+    <button class="ptab" onclick="swP('compdir',3)" title="Company Directory">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="1"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="12.01"/><line x1="8" y1="12" x2="8" y2="12.01"/><line x1="16" y1="12" x2="16" y2="12.01"/></svg>
+    </button>
+    <button class="ptab" onclick="swP('dir',4)" title="Internal Directory">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+    <button class="ptab" onclick="swP('screen',5)" title="Co-browse">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    </button>
+    <div class="topbar-divider"></div>
+    <button class="ptab" title="Chat">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    </button>
+    <button class="ptab" title="Calendar">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    </button>
+    <button class="ptab" title="Profile">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    </button>
+    <button class="ptab" title="Reporting">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="12" width="4" height="9"/><rect x="10" y="7" width="4" height="14"/><rect x="17" y="3" width="4" height="18"/><line x1="3" y1="21" x2="21" y2="21"/></svg>
+    </button>
+  </div>
+
+  <!-- Workspace body -->
+  <div class="workspace-body">
+
+<!-- Main Interaction Area -->
+<main class="main">
+  <div class="cbar" id="cbar">
+    <div class="cid" id="case-id-display">#CS-2024-08917</div>
+    <span class="csub" id="case-sub-display">Margaret Chen · Billing Inquiry · Priority: High</span>
+  </div>
+
+  <div class="chtabs">
+    <div class="cht act" onclick="swCh('voice',this)">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.67-.36 1-.22 1.1.44 2.3.62 3.6.62.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C8.6 21 3 15.4 3 8.6c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.22 2.5.62 3.6a1 1 0 0 1-.25 1.02z"/></svg>
+      Voice
+    </div>
+    <div class="cht" onclick="swCh('email',this)">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>
+      Email <span class="cbadge">2</span>
+    </div>
+    <div class="cht" onclick="swCh('chat',this)">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Chat
+    </div>
+    <div class="cht" onclick="swCh('sms',this)">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      SMS
+    </div>
+  </div>
+
+  <div class="ibody" id="ibody">
+    <!-- Voice view -->
+    <div id="vv">
+      <div class="livbadge"><div style="width:7px;height:7px;border-radius:50%;background:#22c55e" class="pulsed"></div>Live · AI transcription active</div>
+      <div class="tmsg cu">
+        <div class="mav cu">MC</div>
+        <div><div class="mb">Hi, I'm calling about a charge of $147 on my November 3rd statement. I've never seen this before and I'm quite worried about it.</div><div class="mt2">10:41 AM</div></div>
+      </div>
+      <div class="tmsg ag">
+        <div class="mav ag">JS</div>
+        <div><div class="mb">Hi Margaret, thank you for calling! I completely understand your concern. I'll look into that charge right away. Could you confirm your account number for me?</div><div class="mt2">10:42 AM</div></div>
+      </div>
+      <div class="tmsg cu">
+        <div class="mav cu">MC</div>
+        <div><div class="mb">It's ACC-78204. I've been a customer for six years and this is the first time anything like this has appeared on my bill.</div><div class="mt2">10:43 AM</div></div>
+      </div>
+      <div class="tmsg ag">
+        <div class="mav ag">JS</div>
+        <div><div class="mb">Thank you, I have your account right here. Six years — we really appreciate your loyalty, Margaret. Let me pull up that November 3rd charge now.</div><div class="mt2">10:43 AM</div></div>
+      </div>
+      <div class="tmsg cu">
+        <div class="mav cu">MC</div>
+        <div><div class="mb">I really hope this can be resolved. I have a meeting soon and I've been waiting quite a while already.</div><div class="mt2">10:44 AM</div></div>
+      </div>
+      <div class="sep"><div class="sepl"></div><span class="seps">Now</span><div class="sepl"></div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:8px;height:8px;border-radius:50%;background:#0ea5e9" class="pulsed"></div>
+        <span style="font-size:12px;color:#64748b;font-style:italic">Transcribing agent response...</span>
+      </div>
+    </div>
+
+    <!-- Email view -->
+    <div id="ev" style="display:none">
+      <div style="background:#fff;border:1px solid #e4eaf2;border-radius:8px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px;align-items:flex-start">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:2px">Re: Billing Discrepancy — Account ACC-78204</div>
+            <div style="font-size:11px;color:#94a3b8">From: m.chen@brightfield.io · Today, 9:15 AM</div>
+          </div>
+          <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap;margin-left:10px">Unread</span>
+        </div>
+        <div style="font-size:13px;color:#374151;line-height:1.65;border-top:1px solid #f1f5f9;padding-top:10px">
+          Hello Support Team,<br><br>
+          I am writing to flag a charge of <strong>$147.00</strong> that appeared on my November 3rd statement. I do not recall authorising this and it does not match any service I have requested.<br><br>
+          I would appreciate a prompt investigation and resolution.<br><br>
+          Best regards,<br>Margaret Chen, Brightfield Solutions
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Reply</div>
+      <textarea style="width:100%;height:110px;border:1px solid #e4eaf2;border-radius:8px;padding:10px;font-size:13px;color:#0f172a;resize:none;outline:none;font-family:inherit;line-height:1.6;background:#fafafa" placeholder="Type your reply..."></textarea>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button style="height:32px;padding:0 14px;background:#0ea5e9;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">Send Reply</button>
+        <button style="height:32px;padding:0 12px;background:#fff;border:1px solid #e4eaf2;border-radius:6px;color:#374151;font-size:12px;cursor:pointer;font-family:inherit">Save Draft</button>
+        <button style="height:32px;padding:0 12px;background:#fff;border:1px solid #e4eaf2;border-radius:6px;color:#374151;font-size:12px;cursor:pointer;font-family:inherit">Templates</button>
+      </div>
+    </div>
+
+    <!-- Chat view -->
+    <div id="cv" style="display:none">
+      <div style="text-align:center;font-size:11px;color:#94a3b8;margin-bottom:14px">Chat session started · 10:38 AM · Aisha Williams</div>
+      <div class="tmsg cu">
+        <div class="mav cu" style="background:#e0f2fe;color:#0369a1">AW</div>
+        <div><div class="mb">Hi, my app keeps crashing whenever I try to download my invoices. It started two days ago.</div><div class="mt2">10:38 AM</div></div>
+      </div>
+      <div class="tmsg ag">
+        <div class="mav ag">JS</div>
+        <div><div class="mb">Hi Aisha! Sorry to hear that — let's get this sorted. Which app version are you running? You'll find it under Settings → About.</div><div class="mt2">10:40 AM</div></div>
+      </div>
+      <div class="tmsg cu">
+        <div class="mav cu" style="background:#e0f2fe;color:#0369a1">AW</div>
+        <div><div class="mb">Version 4.2.1 on iOS 17.</div><div class="mt2">10:41 AM</div></div>
+      </div>
+      <div class="tmsg ag">
+        <div class="mav ag">JS</div>
+        <div><div class="mb">Got it — there's a known issue with 4.2.1 affecting PDF downloads. Version 4.2.2 was released this morning and resolves it. Can you update from the App Store?</div><div class="mt2">10:42 AM</div></div>
+      </div>
+      <div class="tmsg cu">
+        <div class="mav cu" style="background:#e0f2fe;color:#0369a1">AW</div>
+        <div><div class="mb">Updating now...</div><div class="mt2">10:44 AM</div></div>
+      </div>
+      <div class="sep"><div class="sepl"></div><span class="seps">Now</span><div class="sepl"></div></div>
+    </div>
+
+    <!-- SMS view -->
+    <div id="sv" style="display:none;flex-direction:column;gap:6px">
+      <div style="text-align:center;font-size:11px;color:#94a3b8;margin-bottom:10px">SMS thread · +1 (415) 555-0193</div>
+      <div style="background:#e2e8f0;border-radius:16px 16px 16px 4px;padding:9px 14px;font-size:13px;color:#0f172a;max-width:75%;margin-bottom:2px">I submitted ticket #5521 yesterday about an incorrect charge — no update yet?</div>
+      <div style="font-size:10px;color:#94a3b8;margin-bottom:10px;padding-left:4px">Yesterday · 3:42 PM</div>
+      <div style="align-self:flex-end;margin-left:auto;background:#0ea5e9;border-radius:16px 16px 4px 16px;padding:9px 14px;font-size:13px;color:#fff;max-width:75%;margin-bottom:2px">Hi Margaret, your ticket is with our billing team. Expected resolution within 24 hrs. We'll update you by email.</div>
+      <div style="font-size:10px;color:#94a3b8;text-align:right;margin-bottom:10px;padding-right:4px">Yesterday · 4:01 PM</div>
+      <div style="background:#e2e8f0;border-radius:16px 16px 16px 4px;padding:9px 14px;font-size:13px;color:#0f172a;max-width:75%;margin-bottom:2px">Ok, thank you. Still waiting...</div>
+      <div style="font-size:10px;color:#94a3b8;margin-bottom:10px;padding-left:4px">Today · 8:14 AM</div>
+      <div class="sep"><div class="sepl"></div><span class="seps">Now</span><div class="sepl"></div></div>
+    </div>
+  </div>
+
+  <div class="ibar" id="ibar" style="display:none">
+    <input class="ifield" placeholder="Type a message..." />
+    <button class="sbtn">Send</button>
+  </div>
+</main>
+
+<!-- Right Customer Panel -->
+<aside class="panel" id="right-panel">
+  <div class="panel-resizer" id="panel-resizer"></div>
+  <div class="panel-btn-group">
+    <button class="panel-pill-btn" id="panel-popout-btn" onclick="popOutPanel()" title="Pop out into floating window">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,3 21,3 21,9"/><line x1="21" y1="3" x2="14" y2="10"/><path d="M10 4H4a1 1 0 0 0-1 1v15a1 1 0 0 0 1 1h15a1 1 0 0 0 1-1v-6"/></svg>
+      <span>Float</span>
+    </button>
+    <button class="panel-expand-btn" id="panel-expand-btn" onclick="togExpand()" title="Expand / collapse panel">
+      <svg id="expand-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15,3 21,3 21,9"/><polyline points="9,21 3,21 3,15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      <span id="expand-label">Expand</span>
+    </button>
+  </div>
+
+  <div class="pcontent">
+    <!-- Customer Profile -->
+    <div id="p-cust">
+      <div class="cust-hdr">
+        <div class="cust-av">MC</div>
+        <div class="cust-nm">Margaret Chen</div>
+        <div class="cust-co">VP Operations · Brightfield Solutions</div>
+        <div class="ctags">
+          <span class="tag vip">VIP</span>
+          <span class="tag prm">Enterprise</span>
+          <span class="tag ar">At Risk</span>
+        </div>
+      </div>
+      <div class="isec">
+        <div class="ilbl">Contact</div>
+        <div class="irow"><span class="ik">Phone</span><span class="iv">+1 (415) 555-0193</span></div>
+        <div class="irow"><span class="ik">Email</span><span class="iv lnk">m.chen@brightfield.io</span></div>
+        <div class="irow"><span class="ik">Location</span><span class="iv">San Francisco, CA</span></div>
+        <div class="irow"><span class="ik">Timezone</span><span class="iv">PT (UTC−8)</span></div>
+      </div>
+      <div class="isec">
+        <div class="ilbl">Account</div>
+        <div class="irow"><span class="ik">Account ID</span><span class="iv">ACC-78204</span></div>
+        <div class="irow"><span class="ik">Plan</span><span class="iv">Enterprise Pro</span></div>
+        <div class="irow"><span class="ik">Customer since</span><span class="iv">March 2018</span></div>
+        <div class="irow"><span class="ik">MRR</span><span class="iv">$4,200 / mo</span></div>
+        <div class="irow"><span class="ik">Open tickets</span><span class="iv neg">3 open</span></div>
+        <div class="irow"><span class="ik">Last interaction</span><span class="iv">Oct 29, 2024</span></div>
+        <div class="irow"><span class="ik">CSAT score</span><span class="iv pos">4.7 / 5.0</span></div>
+        <div class="irow"><span class="ik">NPS</span><span class="iv pos">72</span></div>
+      </div>
+      <div class="isec" style="border:none">
+        <div class="ilbl">Live Sentiment</div>
+        <div style="display:flex;align-items:center;gap:8px;padding:5px 0 6px">
+          <div style="flex:1;height:5px;background:#e8edf3;border-radius:3px;overflow:hidden"><div style="width:30%;height:100%;background:#ef4444;border-radius:3px"></div></div>
+          <span style="font-size:11px;color:#ef4444;font-weight:700">Frustrated</span>
+        </div>
+        <div style="font-size:11px;color:#64748b;line-height:1.55">Customer expressed concern about unrecognised charge. Mild frustration detected. Empathy-first approach recommended.</div>
+      </div>
+
+      <!-- Notes embedded in customer tab -->
+      <div class="isec" style="border-top:1px solid #f1f5f9;border-bottom:none;padding:13px 16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div class="ilbl" style="margin-bottom:0">Case Notes</div>
+          <span style="font-size:10px;color:#22c55e;font-weight:700;display:flex;align-items:center;gap:4px"><div style="width:5px;height:5px;border-radius:50%;background:#22c55e"></div>Auto-saving</span>
+        </div>
+        <textarea style="width:100%;min-height:140px;border:1px solid #e4eaf2;border-radius:8px;padding:10px;font-size:12px;color:#0f172a;resize:none;outline:none;font-family:inherit;line-height:1.65;background:#fafafa">- Customer: Margaret Chen, ACC-78204
+- Issue: Unrecognised $147 charge on Nov 3 invoice
+- 6-year customer, Enterprise Pro, MRR $4,200
+- Customer frustrated, mentions upcoming meeting
+- ACTION: Check Nov billing run for errors
+- Consider waiving if billing error confirmed ($250 limit)</textarea>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <button style="flex:1;height:30px;background:#0ea5e9;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Save Note</button>
+          <button style="height:30px;padding:0 12px;background:#fff;border:1px solid #e4eaf2;border-radius:6px;color:#374151;font-size:12px;cursor:pointer;font-family:inherit">Clear</button>
+        </div>
+        <div style="margin-top:12px">
+          <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Wrap-up Code</div>
+          <select style="width:100%;height:32px;border:1px solid #e4eaf2;border-radius:6px;font-size:12px;color:#374151;padding:0 10px;background:#fff;outline:none;font-family:inherit">
+            <option value="">Select outcome...</option>
+            <option>Billing inquiry — resolved</option>
+            <option>Billing inquiry — escalated</option>
+            <option>Billing error — waived</option>
+            <option>Technical support — resolved</option>
+            <option>Complaint — retention offer</option>
+            <option>Account change request</option>
+            <option>General inquiry</option>
+          </select>
+        </div>
+        <div style="margin-top:10px">
+          <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">Follow-up</div>
+          <div style="display:flex;gap:6px">
+            <input type="date" style="flex:1;height:30px;border:1px solid #e4eaf2;border-radius:6px;font-size:12px;padding:0 8px;outline:none;font-family:inherit;color:#374151" />
+            <button style="height:30px;padding:0 10px;background:#fff;border:1px solid #e4eaf2;border-radius:6px;color:#374151;font-size:12px;cursor:pointer;font-family:inherit">Set</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Assist -->
+    <div id="p-ai" style="display:none;padding:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        <span style="font-size:13px;font-weight:700;color:#0f172a">AI Assist</span>
+        <span style="font-size:10px;font-weight:700;background:#ede9fe;color:#5b21b6;padding:2px 7px;border-radius:4px">LIVE</span>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Next Best Action</div>
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:11px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:4px">Waive the $147 charge</div>
+        <div style="font-size:12px;color:#78350f;line-height:1.55">6-year enterprise client at $4,200 MRR. Charge may be a system error. Waiving has strong retention ROI and fits within your $250 authority limit.</div>
+        <button style="margin-top:8px;font-size:11px;font-weight:700;color:#d97706;background:none;border:none;cursor:pointer;padding:0;font-family:inherit">Apply action →</button>
+      </div>
+      <div class="scard" style="border-color:#bfdbfe;background:#eff6ff">
+        <div class="stype" style="color:#1d4ed8">Schedule call back</div>
+        <div class="stxt" style="margin-bottom:10px">Margaret mentioned she has a meeting coming up soon. Would you like AI to schedule a callback at a convenient time?</div>
+        <div style="display:flex;gap:6px">
+          <button style="height:28px;padding:0 12px;background:#1d4ed8;border:none;border-radius:6px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">Yes, schedule callback</button>
+          <button style="height:28px;padding:0 10px;background:#fff;border:1px solid #bfdbfe;border-radius:6px;color:#374151;font-size:11px;cursor:pointer;font-family:inherit">Dismiss</button>
+        </div>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Suggested Responses</div>
+      <div class="scard"><div class="stype">Empathy + Resolution</div><div class="stxt">"I completely understand, Margaret. Looking at your account now, I can see the November charge — this appears to be a billing error on our end. I'm going to get this reversed for you today."</div></div>
+      <div class="scard"><div class="stype">Escalation Path</div><div class="stxt">"I'd like to loop in our billing specialist right now — they can provide a full breakdown and process any adjustments immediately while you're on the line."</div></div>
+      <div class="scard"><div class="stype">Retention Offer</div><div class="stxt">"As a valued enterprise customer, I'd also like to offer you a complimentary account review to make sure your plan is fully optimised going forward."</div></div>
+    </div>
+
+    <!-- History -->
+    <div id="p-hist" style="display:none">
+      <div style="padding:10px 16px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#64748b;display:flex;justify-content:space-between">
+        <span>28 interactions this year</span><span style="color:#0ea5e9;cursor:pointer;font-weight:600">View all</span>
+      </div>
+      <div class="hi"><div class="hihd"><div class="hitype v"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.67-.36 1-.22 1.1.44 2.3.62 3.6.62.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C8.6 21 3 15.4 3 8.6c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.22 2.5.62 3.6a1 1 0 0 1-.25 1.02z"/></svg>Voice Call</div><div class="hidate">Oct 29</div></div><div class="hidesc">Plan upgrade options — Enterprise Pro features walkthrough</div><div class="hidur">14m 32s · Agent: Sarah K. · CSAT: 5/5</div></div>
+      <div class="hi"><div class="hihd"><div class="hitype e"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>Email</div><div class="hidate">Oct 15</div></div><div class="hidesc">Q3 invoice request — PDF statement sent</div><div class="hidur">Resolved auto · 2h SLA</div></div>
+      <div class="hi"><div class="hihd"><div class="hitype c"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Chat</div><div class="hidate">Sep 22</div></div><div class="hidesc">API rate limit issue — resolved with config change</div><div class="hidur">23m · Agent: L. Park · CSAT: 5/5</div></div>
+      <div class="hi"><div class="hihd"><div class="hitype v"><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.67-.36 1-.22 1.1.44 2.3.62 3.6.62.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C8.6 21 3 15.4 3 8.6c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.22 2.5.62 3.6a1 1 0 0 1-.25 1.02z"/></svg>Voice Call</div><div class="hidate">Aug 3</div></div><div class="hidesc">Renewal negotiation — 2-year contract signed</div><div class="hidur">38m · Agent: Tom R.</div></div>
+      <div class="hi"><div class="hihd"><div class="hitype e"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>Email</div><div class="hidate">Jul 11</div></div><div class="hidesc">Feature request — advanced reporting dashboard</div><div class="hidur">Status: Open · Ticket #4892</div></div>
+    </div>
+
+    <!-- Company Directory -->
+    <div id="p-compdir" style="display:none">
+      <div style="padding:12px 14px 8px;border-bottom:1px solid #f1f5f9">
+        <input id="compdir-search" style="width:100%;height:34px;border:1px solid #e4eaf2;border-radius:8px;padding:0 10px 0 32px;font-size:13px;outline:none;background:#f8fafc;font-family:inherit;color:#0f172a;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:10px center;margin-bottom:10px" placeholder="Search Brightfield Solutions..." oninput="filtCompDir(this.value)" />
+        <div style="display:flex;gap:5px;flex-wrap:wrap" id="compdir-filters">
+          <button class="cdf act" onclick="filtCompDept('All',this)">All</button>
+          <button class="cdf" onclick="filtCompDept('Operations',this)">Operations</button>
+          <button class="cdf" onclick="filtCompDept('Finance',this)">Finance</button>
+          <button class="cdf" onclick="filtCompDept('Engineering',this)">Engineering</button>
+          <button class="cdf" onclick="filtCompDept('Legal',this)">Legal</button>
+        </div>
+      </div>
+      <div style="padding:6px 14px 3px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.07em">Brightfield Solutions</div>
+      <div id="compdir-list"></div>
+    </div>
+
+    <!-- Directory -->
+    <div id="p-dir" style="display:none">
+      <div style="padding:12px 14px;border-bottom:1px solid #f1f5f9">
+        <input id="dsearch" style="width:100%;height:34px;border:1px solid #e4eaf2;border-radius:8px;padding:0 10px 0 32px;font-size:13px;outline:none;background:#f8fafc;font-family:inherit;color:#0f172a;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:10px center" placeholder="Search agents, teams..." oninput="filtDir(this.value)" />
+      </div>
+      <div style="padding:8px 14px 4px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.07em">Available Now</div>
+      <div id="dlist"></div>
+    </div>
+
+    <!-- Screen Share -->
+    <div id="p-screen" style="display:none;padding:16px">
+      <div style="background:#f8fafc;border:2px dashed #d1d9e3;border-radius:10px;padding:32px 20px;text-align:center">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" style="margin:0 auto 12px;display:block"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        <div style="font-size:14px;font-weight:700;color:#374151;margin-bottom:6px">Co-browse / Screen Share</div>
+        <div style="font-size:12px;color:#64748b;line-height:1.6;margin-bottom:18px">Send a secure link to the customer to share their screen or begin a guided co-browse session.</div>
+        <button style="width:100%;height:36px;background:#0ea5e9;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;font-family:inherit">Send Screen Share Link</button>
+        <button style="width:100%;height:36px;background:#fff;border:1px solid #e4eaf2;border-radius:8px;color:#374151;font-size:13px;cursor:pointer;font-family:inherit">Start Co-Browse</button>
+      </div>
+      <div style="margin-top:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px">
+        <div style="font-size:11px;font-weight:700;color:#15803d;margin-bottom:3px">Secure session</div>
+        <div style="font-size:11px;color:#166534;line-height:1.5">Sessions are end-to-end encrypted. The customer can end sharing at any time. Agent cannot access files outside the browser.</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════════════════════════════════════════════════
+     SETTINGS OVERLAY
+════════════════════════════════════════════════════ -->
+<style>
+/* Settings overlay — covers workspace (main + panel), sits inside .workspace */
+#settings-overlay{
+  display:none;position:absolute;top:0;left:0;right:0;bottom:0;
+  background:#f4f6f9;z-index:100;flex-direction:row;overflow:hidden;
+}
+#settings-overlay.open{display:flex}
+.stg-nav{width:220px;background:#fff;border-right:1px solid #e4eaf2;display:flex;flex-direction:column;flex-shrink:0}
+.stg-nav-hdr{padding:20px 20px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center}
+.stg-nav-title{font-size:15px;font-weight:700;color:#0f172a}
+.stg-nav-items{flex:1;overflow-y:auto;padding:10px}
+.stg-nav-section{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.08em;padding:10px 8px 4px}
+.stg-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;cursor:pointer;color:#374151;font-size:13px;font-weight:500;transition:all 0.13s;margin-bottom:1px;border:none;background:transparent;width:100%;text-align:left;font-family:inherit}
+.stg-item:hover{background:#f1f5f9;color:#0f172a}
+.stg-item.act{background:#eff6ff;color:#1d4ed8}
+.stg-item svg{flex-shrink:0;opacity:0.7}
+.stg-item.act svg{opacity:1}
+.stg-body{flex:1;overflow-y:auto;padding:32px 40px}
+.stg-pg{display:none}
+.stg-pg.act{display:block}
+.stg-pg-title{font-size:20px;font-weight:700;color:#0f172a;margin-bottom:4px}
+.stg-pg-sub{font-size:13px;color:#64748b;margin-bottom:28px}
+.stg-card{background:#fff;border:1px solid #e4eaf2;border-radius:10px;padding:24px;margin-bottom:20px}
+.stg-card-title{font-size:13px;font-weight:700;color:#0f172a;margin-bottom:2px}
+.stg-card-desc{font-size:12px;color:#94a3b8;margin-bottom:18px}
+.stg-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9}
+.stg-row:last-child{border-bottom:none;padding-bottom:0}
+.stg-row-label{font-size:13px;color:#374151;font-weight:500}
+.stg-row-sub{font-size:11px;color:#94a3b8;margin-top:2px}
+.stg-row-ctrl{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:24px}
+.toggle{width:36px;height:20px;background:#e2e8f0;border-radius:10px;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;border:none;outline:none}
+.toggle::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:2px;left:2px;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.15)}
+.toggle.on{background:#0ea5e9}
+.toggle.on::after{transform:translateX(16px)}
+.stg-slider{width:130px;height:4px;border-radius:2px;accent-color:#0ea5e9;cursor:pointer}
+.stg-select{height:32px;border:1px solid #e4eaf2;border-radius:6px;padding:0 10px;font-size:12px;color:#374151;background:#fff;outline:none;font-family:inherit;cursor:pointer;min-width:150px}
+.stg-select:focus{border-color:#0ea5e9}
+.stg-input{height:32px;border:1px solid #e4eaf2;border-radius:6px;padding:0 10px;font-size:12px;color:#374151;background:#fff;outline:none;font-family:inherit;width:180px}
+.stg-input:focus{border-color:#0ea5e9;box-shadow:0 0 0 2px #0ea5e922}
+.kbd{display:inline-flex;align-items:center;gap:3px}
+.key{background:#f1f5f9;border:1px solid #e2e8f0;border-bottom:2px solid #cbd5e1;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600;color:#374151;font-family:ui-monospace,'Courier New',monospace}
+.stg-save-bar{position:sticky;bottom:0;background:linear-gradient(transparent,#f4f6f9 30%);padding:20px 0 0;display:flex;gap:8px}
+.stg-save{height:36px;padding:0 20px;background:#0ea5e9;border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.stg-save:hover{background:#0284c7}
+.stg-reset{height:36px;padding:0 16px;background:#fff;border:1px solid #e4eaf2;border-radius:8px;color:#374151;font-size:13px;cursor:pointer;font-family:inherit}
+.stg-reset:hover{background:#f8fafc}
+.vol-val{font-size:12px;font-weight:700;color:#0ea5e9;min-width:32px;text-align:right}
+</style>
+
+<div id="settings-overlay">
+  <!-- Settings nav sidebar -->
+  <div class="stg-nav">
+    <div class="stg-nav-hdr">
+      <span class="stg-nav-title">Settings</span>
+    </div>
+    <div class="stg-nav-items">
+      <div class="stg-nav-section">Audio</div>
+      <button class="stg-item act" onclick="swStg('audio',this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        Audio &amp; Headset
+      </button>
+      <button class="stg-item" onclick="swStg('ringtone',this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Ringtones &amp; Alerts
+      </button>
+
+      <div class="stg-nav-section">Interface</div>
+      <button class="stg-item" onclick="swStg('keyboard',this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="10"/><line x1="10" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="14" y2="10"/><line x1="18" y1="10" x2="18" y2="10"/><line x1="6" y1="14" x2="18" y2="14"/></svg>
+        Keyboard Shortcuts
+      </button>
+      <button class="stg-item" onclick="swStg('display',this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Display &amp; Layout
+      </button>
+      <button class="stg-item" onclick="swStg('notifications',this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><circle cx="12" cy="2" r="1" fill="currentColor"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        Notifications
+      </button>
+
+      <div class="stg-nav-section">Channels</div>
+      <button class="stg-item" onclick="swStg('email',this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>
+        Email Behavior
+      </button>
+      <button class="stg-item" onclick="swStg('chat',this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Chat &amp; SMS
+      </button>
+      <button class="stg-item" onclick="swStg('voice',this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.63 3.42 2 2 0 0 1 3.6 1.24h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.69a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        Voice &amp; Calls
+      </button>
+
+      <div class="stg-nav-section">Account</div>
+      <button class="stg-item" onclick="swStg('profile',this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        Profile &amp; Status
+      </button>
+      <button class="stg-item" onclick="swStg('privacy',this)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Privacy &amp; Security
+      </button>
+    </div>
+  </div>
+
+  <!-- Settings content -->
+  <div class="stg-body">
+
+    <!-- ── Audio & Headset ── -->
+    <div class="stg-pg act" id="stg-audio">
+      <div class="stg-pg-title">Audio &amp; Headset</div>
+      <div class="stg-pg-sub">Control speaker, microphone, and headset behaviour during calls.</div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Output Device</div>
+        <div class="stg-card-desc">Select where call audio and ringtones are played.</div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Speaker / Headset</div><div class="stg-row-sub">Primary audio output for all call audio</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select"><option>Bose QC45 (USB)</option><option>MacBook Pro Speakers</option><option>AirPods Pro</option><option>Jabra Evolve2 65</option></select></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Ringtone Speaker</div><div class="stg-row-sub">Can differ from call audio device</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select"><option>MacBook Pro Speakers</option><option>Bose QC45 (USB)</option><option>Same as headset</option></select></div>
+        </div>
+      </div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Input Device</div>
+        <div class="stg-card-desc">Select your microphone for voice calls.</div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Microphone</div><div class="stg-row-sub">Active input device</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select"><option>Bose QC45 Mic (USB)</option><option>MacBook Pro Mic</option><option>Jabra Evolve2 65 Mic</option></select></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Noise suppression</div><div class="stg-row-sub">Filter background noise from your mic</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Echo cancellation</div><div class="stg-row-sub">Prevent audio feedback loop</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+      </div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Volume</div>
+        <div class="stg-card-desc">Adjust audio levels independently for each purpose.</div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Call volume</div></div>
+          <div class="stg-row-ctrl">
+            <input type="range" class="stg-slider" min="0" max="100" value="80" oninput="document.getElementById('vol-call').textContent=this.value+'%'">
+            <span class="vol-val" id="vol-call">80%</span>
+          </div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Ringtone volume</div></div>
+          <div class="stg-row-ctrl">
+            <input type="range" class="stg-slider" min="0" max="100" value="65" oninput="document.getElementById('vol-ring').textContent=this.value+'%'">
+            <span class="vol-val" id="vol-ring">65%</span>
+          </div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Notification volume</div></div>
+          <div class="stg-row-ctrl">
+            <input type="range" class="stg-slider" min="0" max="100" value="50" oninput="document.getElementById('vol-notif').textContent=this.value+'%'">
+            <span class="vol-val" id="vol-notif">50%</span>
+          </div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Mute on answer</div><div class="stg-row-sub">Auto-mute mic when picking up a call</div></div>
+          <div class="stg-row-ctrl"><button class="toggle" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+      </div>
+      <div class="stg-save-bar"><button class="stg-save">Save changes</button><button class="stg-reset">Reset to defaults</button></div>
+    </div>
+
+    <!-- ── Ringtones & Alerts ── -->
+    <div class="stg-pg" id="stg-ringtone">
+      <div class="stg-pg-title">Ringtones &amp; Alerts</div>
+      <div class="stg-pg-sub">Customise the sounds played for different interaction types.</div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Ringtones</div>
+        <div class="stg-card-desc">Choose a ringtone per channel type.</div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Inbound voice call</div></div>
+          <div class="stg-row-ctrl">
+            <select class="stg-select"><option>Classic Ring</option><option>Soft Chime</option><option>Digital Pulse</option><option>Subtle Beep</option><option>None</option></select>
+            <button style="height:30px;padding:0 10px;border:1px solid #e4eaf2;border-radius:6px;background:#fff;font-size:11px;color:#374151;cursor:pointer;font-family:inherit">▶ Preview</button>
+          </div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Outbound call connected</div></div>
+          <div class="stg-row-ctrl">
+            <select class="stg-select"><option>Soft Chime</option><option>Classic Ring</option><option>Digital Pulse</option><option>None</option></select>
+            <button style="height:30px;padding:0 10px;border:1px solid #e4eaf2;border-radius:6px;background:#fff;font-size:11px;color:#374151;cursor:pointer;font-family:inherit">▶ Preview</button>
+          </div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Chat / SMS message</div></div>
+          <div class="stg-row-ctrl">
+            <select class="stg-select"><option>Ping</option><option>Bubble Pop</option><option>Soft Chime</option><option>None</option></select>
+            <button style="height:30px;padding:0 10px;border:1px solid #e4eaf2;border-radius:6px;background:#fff;font-size:11px;color:#374151;cursor:pointer;font-family:inherit">▶ Preview</button>
+          </div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">New email</div></div>
+          <div class="stg-row-ctrl">
+            <select class="stg-select"><option>Mail Drop</option><option>Ping</option><option>None</option></select>
+            <button style="height:30px;padding:0 10px;border:1px solid #e4eaf2;border-radius:6px;background:#fff;font-size:11px;color:#374151;cursor:pointer;font-family:inherit">▶ Preview</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Alert Behaviour</div>
+        <div class="stg-card-desc">Control when and how alerts are triggered.</div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Play ringtone when on a call</div><div class="stg-row-sub">Alert for a second inbound call while active</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Max ring duration</div><div class="stg-row-sub">Seconds before call auto-declines</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select" style="min-width:100px"><option>20s</option><option>30s</option><option>45s</option><option>60s</option><option>No limit</option></select></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Vibrate (if supported)</div></div>
+          <div class="stg-row-ctrl"><button class="toggle" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+      </div>
+      <div class="stg-save-bar"><button class="stg-save">Save changes</button><button class="stg-reset">Reset to defaults</button></div>
+    </div>
+
+    <!-- ── Keyboard Shortcuts ── -->
+    <div class="stg-pg" id="stg-keyboard">
+      <div class="stg-pg-title">Keyboard Shortcuts</div>
+      <div class="stg-pg-sub">Speed up your workflow with global and in-call shortcuts.</div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Global Shortcuts</div>
+        <div class="stg-card-desc">Active at all times regardless of focus.</div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Answer / End call</div></div>
+          <div class="stg-row-ctrl"><span class="kbd"><span class="key">Alt</span><span style="font-size:11px;color:#94a3b8">+</span><span class="key">A</span></span></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Toggle mute</div></div>
+          <div class="stg-row-ctrl"><span class="kbd"><span class="key">Alt</span><span style="font-size:11px;color:#94a3b8">+</span><span class="key">M</span></span></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Toggle hold</div></div>
+          <div class="stg-row-ctrl"><span class="kbd"><span class="key">Alt</span><span style="font-size:11px;color:#94a3b8">+</span><span class="key">H</span></span></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Open transfer dialog</div></div>
+          <div class="stg-row-ctrl"><span class="kbd"><span class="key">Alt</span><span style="font-size:11px;color:#94a3b8">+</span><span class="key">T</span></span></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Open dialpad</div></div>
+          <div class="stg-row-ctrl"><span class="kbd"><span class="key">Alt</span><span style="font-size:11px;color:#94a3b8">+</span><span class="key">D</span></span></div>
+        </div>
+      </div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Navigation Shortcuts</div>
+        <div class="stg-card-desc">Switch between panels and views quickly.</div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Focus customer panel</div></div>
+          <div class="stg-row-ctrl"><span class="kbd"><span class="key">Ctrl</span><span style="font-size:11px;color:#94a3b8">+</span><span class="key">1</span></span></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Focus AI assist panel</div></div>
+          <div class="stg-row-ctrl"><span class="kbd"><span class="key">Ctrl</span><span style="font-size:11px;color:#94a3b8">+</span><span class="key">2</span></span></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Focus notes panel</div></div>
+          <div class="stg-row-ctrl"><span class="kbd"><span class="key">Ctrl</span><span style="font-size:11px;color:#94a3b8">+</span><span class="key">3</span></span></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Open settings</div></div>
+          <div class="stg-row-ctrl"><span class="kbd"><span class="key">Ctrl</span><span style="font-size:11px;color:#94a3b8">+</span><span class="key">,</span></span></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Search directory</div></div>
+          <div class="stg-row-ctrl"><span class="kbd"><span class="key">Ctrl</span><span style="font-size:11px;color:#94a3b8">+</span><span class="key">K</span></span></div>
+        </div>
+      </div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Shortcut Options</div>
+        <div class="stg-card-desc"></div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Enable global shortcuts</div><div class="stg-row-sub">Shortcuts work even when app is not focused</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Show shortcut hints in UI</div><div class="stg-row-sub">Display keyboard hints on hover</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+      </div>
+      <div class="stg-save-bar"><button class="stg-save">Save changes</button><button class="stg-reset">Reset to defaults</button></div>
+    </div>
+
+    <!-- ── Display & Layout ── -->
+    <div class="stg-pg" id="stg-display">
+      <div class="stg-pg-title">Display &amp; Layout</div>
+      <div class="stg-pg-sub">Control how the workspace looks and is arranged.</div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Appearance</div>
+        <div class="stg-card-desc"></div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Theme</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select"><option>Light</option><option>Dark</option><option>System default</option></select></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Font size</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select" style="min-width:110px"><option>Small (12px)</option><option selected>Default (13px)</option><option>Large (15px)</option></select></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Compact density</div><div class="stg-row-sub">Reduce padding for more content on screen</div></div>
+          <div class="stg-row-ctrl"><button class="toggle" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Show agent avatar</div><div class="stg-row-sub">Display initials in the transcript view</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+      </div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Panel Defaults</div>
+        <div class="stg-card-desc">Set which panel opens by default when a new case loads.</div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Default right panel tab</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select"><option>Customer Profile</option><option>AI Assist</option><option>Notes</option><option>History</option></select></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Default channel view</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select"><option>Voice</option><option>Email</option><option>Chat</option></select></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Remember last panel state</div><div class="stg-row-sub">Restore panel widths between sessions</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+      </div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Live Transcription</div>
+        <div class="stg-card-desc"></div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Show live transcription</div><div class="stg-row-sub">Display real-time speech-to-text in the voice view</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Transcription language</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select"><option>Auto-detect</option><option>English (US)</option><option>English (UK)</option><option>Spanish</option><option>French</option><option>Mandarin</option></select></div>
+        </div>
+      </div>
+      <div class="stg-save-bar"><button class="stg-save">Save changes</button><button class="stg-reset">Reset to defaults</button></div>
+    </div>
+
+    <!-- ── Notifications ── -->
+    <div class="stg-pg" id="stg-notifications">
+      <div class="stg-pg-title">Notifications</div>
+      <div class="stg-pg-sub">Manage desktop and in-app notification behaviour.</div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Desktop Notifications</div>
+        <div class="stg-card-desc">System-level alerts shown outside the browser window.</div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Enable desktop notifications</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Inbound calls</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">New chat messages</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">New emails</div></div>
+          <div class="stg-row-ctrl"><button class="toggle" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Queue threshold alerts</div><div class="stg-row-sub">Alert when queue exceeds a set size</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+      </div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Do Not Disturb</div>
+        <div class="stg-card-desc">Suppress notifications during scheduled times.</div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Enable DND schedule</div></div>
+          <div class="stg-row-ctrl"><button class="toggle" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">DND window</div></div>
+          <div class="stg-row-ctrl" style="gap:6px">
+            <input type="time" value="18:00" style="height:30px;border:1px solid #e4eaf2;border-radius:6px;padding:0 8px;font-size:12px;font-family:inherit;outline:none;color:#374151">
+            <span style="font-size:12px;color:#94a3b8">to</span>
+            <input type="time" value="08:00" style="height:30px;border:1px solid #e4eaf2;border-radius:6px;padding:0 8px;font-size:12px;font-family:inherit;outline:none;color:#374151">
+          </div>
+        </div>
+      </div>
+      <div class="stg-save-bar"><button class="stg-save">Save changes</button><button class="stg-reset">Reset to defaults</button></div>
+    </div>
+
+    <!-- ── Email Behavior ── -->
+    <div class="stg-pg" id="stg-email">
+      <div class="stg-pg-title">Email Behavior</div>
+      <div class="stg-pg-sub">Control how email cases are handled, displayed, and responded to.</div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Composing &amp; Replying</div>
+        <div class="stg-card-desc"></div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Default reply mode</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select"><option>Reply to sender</option><option>Reply all</option></select></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Default signature</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select"><option>Standard agent sig</option><option>Formal</option><option>None</option></select></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Auto-save drafts</div><div class="stg-row-sub">Save reply drafts every 60 seconds</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Spell check</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Confirm before sending</div><div class="stg-row-sub">Show a confirmation prompt on Send</div></div>
+          <div class="stg-row-ctrl"><button class="toggle" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+      </div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Email Routing</div>
+        <div class="stg-card-desc">Configure how emails are assigned and prioritised.</div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Auto-accept email cases</div><div class="stg-row-sub">Emails assigned directly without prompt</div></div>
+          <div class="stg-row-ctrl"><button class="toggle" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Show email preview in queue</div><div class="stg-row-sub">Display snippet of email body in queue card</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">SLA warning threshold</div><div class="stg-row-sub">Alert when reply SLA is below this threshold</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select" style="min-width:120px"><option>15 minutes</option><option>30 minutes</option><option>1 hour</option><option>2 hours</option></select></div>
+        </div>
+      </div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Templates</div>
+        <div class="stg-card-desc">Manage your personal email response templates.</div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Billing apology</div><div class="stg-row-sub">Used 48 times this month</div></div>
+          <div class="stg-row-ctrl" style="gap:6px">
+            <button style="height:28px;padding:0 10px;border:1px solid #e4eaf2;border-radius:5px;background:#fff;font-size:11px;color:#374151;cursor:pointer;font-family:inherit">Edit</button>
+          </div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Tech support — escalation</div><div class="stg-row-sub">Used 22 times this month</div></div>
+          <div class="stg-row-ctrl" style="gap:6px">
+            <button style="height:28px;padding:0 10px;border:1px solid #e4eaf2;border-radius:5px;background:#fff;font-size:11px;color:#374151;cursor:pointer;font-family:inherit">Edit</button>
+          </div>
+        </div>
+        <div class="stg-row" style="border:none">
+          <button style="height:30px;padding:0 14px;border:1px dashed #c0ccd8;border-radius:6px;background:transparent;font-size:12px;color:#64748b;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add template
+          </button>
+        </div>
+      </div>
+      <div class="stg-save-bar"><button class="stg-save">Save changes</button><button class="stg-reset">Reset to defaults</button></div>
+    </div>
+
+    <!-- ── Chat & SMS ── -->
+    <div class="stg-pg" id="stg-chat">
+      <div class="stg-pg-title">Chat &amp; SMS</div>
+      <div class="stg-pg-sub">Configure behaviour for live chat and text messaging.</div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Chat Preferences</div>
+        <div class="stg-card-desc"></div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Send with Enter key</div><div class="stg-row-sub">Use Shift+Enter for new line</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Show typing indicator to customer</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Auto-accept chat sessions</div></div>
+          <div class="stg-row-ctrl"><button class="toggle" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Max concurrent chats</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select" style="min-width:80px"><option>1</option><option selected>2</option><option>3</option><option>4</option></select></div>
+        </div>
+      </div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">SMS Preferences</div>
+        <div class="stg-card-desc"></div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Outbound caller ID</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select"><option>+1 (888) 555-0100 (Main)</option><option>+1 (888) 555-0101 (Billing)</option></select></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Character limit warning</div><div class="stg-row-sub">Warn before sending multi-part SMS</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+      </div>
+      <div class="stg-save-bar"><button class="stg-save">Save changes</button><button class="stg-reset">Reset to defaults</button></div>
+    </div>
+
+    <!-- ── Voice & Calls ── -->
+    <div class="stg-pg" id="stg-voice">
+      <div class="stg-pg-title">Voice &amp; Calls</div>
+      <div class="stg-pg-sub">Manage inbound, outbound, and wrap-up call settings.</div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Call Handling</div>
+        <div class="stg-card-desc"></div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Auto-answer inbound calls</div><div class="stg-row-sub">Answer after 2-second delay</div></div>
+          <div class="stg-row-ctrl"><button class="toggle" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Screen pop on call answer</div><div class="stg-row-sub">Automatically open customer record</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Default hold music</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select"><option>Company default</option><option>Jazz Lounge</option><option>Acoustic Calm</option><option>Silence</option></select></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Recording notice</div><div class="stg-row-sub">Play recording disclosure on answer</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+      </div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Wrap-up</div>
+        <div class="stg-card-desc">Configure post-call behaviour.</div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Wrap-up timer</div><div class="stg-row-sub">Automatic ready after this period</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select" style="min-width:110px"><option>30 seconds</option><option>1 minute</option><option selected>2 minutes</option><option>5 minutes</option><option>Manual only</option></select></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Require wrap-up code</div><div class="stg-row-sub">Block ready state until a code is selected</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Require notes on wrap-up</div></div>
+          <div class="stg-row-ctrl"><button class="toggle" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+      </div>
+      <div class="stg-save-bar"><button class="stg-save">Save changes</button><button class="stg-reset">Reset to defaults</button></div>
+    </div>
+
+    <!-- ── Profile & Status ── -->
+    <div class="stg-pg" id="stg-profile">
+      <div class="stg-pg-title">Profile &amp; Status</div>
+      <div class="stg-pg-sub">Update your agent profile and availability settings.</div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Agent Profile</div>
+        <div class="stg-card-desc"></div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Display name</div></div>
+          <div class="stg-row-ctrl"><input class="stg-input" value="J. Smith"></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Agent ID</div></div>
+          <div class="stg-row-ctrl"><input class="stg-input" value="AGT-00142" readonly style="color:#94a3b8;background:#f8fafc"></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Team</div></div>
+          <div class="stg-row-ctrl"><input class="stg-input" value="Billing &amp; Accounts" readonly style="color:#94a3b8;background:#f8fafc"></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Skills</div><div class="stg-row-sub">Assigned by supervisor</div></div>
+          <div class="stg-row-ctrl" style="flex-wrap:wrap;gap:4px;justify-content:flex-end;max-width:240px">
+            <span style="background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px">Billing</span>
+            <span style="background:#f0fdf4;color:#15803d;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px">Retention</span>
+            <span style="background:#fef9c3;color:#854d0e;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px">Escalations</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Availability</div>
+        <div class="stg-card-desc">Control when and how you receive interactions.</div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Default status on login</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select"><option>Available</option><option>Away</option><option>Busy</option></select></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Auto-set Away after idle</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select" style="min-width:120px"><option>Never</option><option>5 minutes</option><option selected>10 minutes</option><option>15 minutes</option><option>30 minutes</option></select></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Accept voice calls</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Accept chat &amp; SMS</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Accept emails</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+      </div>
+      <div class="stg-save-bar"><button class="stg-save">Save changes</button><button class="stg-reset">Reset to defaults</button></div>
+    </div>
+
+    <!-- ── Privacy & Security ── -->
+    <div class="stg-pg" id="stg-privacy">
+      <div class="stg-pg-title">Privacy &amp; Security</div>
+      <div class="stg-pg-sub">Manage session security, data handling, and audit settings.</div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Session Security</div>
+        <div class="stg-card-desc"></div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Auto-lock after idle</div></div>
+          <div class="stg-row-ctrl"><select class="stg-select"><option>5 minutes</option><option selected>15 minutes</option><option>30 minutes</option><option>Never</option></select></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Require PIN to unlock</div></div>
+          <div class="stg-row-ctrl"><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Log out on browser close</div></div>
+          <div class="stg-row-ctrl"><button class="toggle" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+      </div>
+
+      <div class="stg-card">
+        <div class="stg-card-title">Data &amp; Recording</div>
+        <div class="stg-card-desc"></div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Call recording consent</div><div class="stg-row-sub">Your calls are recorded for quality purposes</div></div>
+          <div class="stg-row-ctrl"><span style="font-size:11px;font-weight:700;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;padding:3px 10px;border-radius:5px">Acknowledged</span></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Screen recording</div><div class="stg-row-sub">Supervisors may monitor your screen</div></div>
+          <div class="stg-row-ctrl"><span style="font-size:11px;font-weight:700;color:#16a34a;background:#f0fdf4;border:1px solid #bbf7d0;padding:3px 10px;border-radius:5px">Acknowledged</span></div>
+        </div>
+        <div class="stg-row">
+          <div><div class="stg-row-label">Download my activity log</div><div class="stg-row-sub">Export your interaction history (last 90 days)</div></div>
+          <div class="stg-row-ctrl"><button style="height:30px;padding:0 14px;border:1px solid #e4eaf2;border-radius:6px;background:#fff;font-size:12px;color:#374151;cursor:pointer;font-family:inherit">Export CSV</button></div>
+        </div>
+      </div>
+      <div class="stg-save-bar"><button class="stg-save">Save changes</button><button class="stg-reset">Reset to defaults</button></div>
+    </div>
+
+  </div><!-- /stg-body -->
+</div><!-- /settings-overlay -->
+  </div><!-- /workspace-body -->
+
+</div><!-- /workspace -->
+</div><!-- /app -->
+</div><!-- /shell -->
+
+<script>
+const panels=['cust','ai','hist','compdir','dir','screen'];
+const chViews={voice:'vv',email:'ev',chat:'cv',sms:'sv'};
+
+function swCh(ch,el){
+  Object.values(chViews).forEach(v=>{const e=document.getElementById(v);if(e)e.style.display='none';});
+  document.querySelectorAll('.cht').forEach(t=>t.classList.remove('act'));
+  const v=document.getElementById(chViews[ch]);
+  if(v)v.style.display=ch==='sms'?'flex':'block';
+  el.classList.add('act');
+  document.getElementById('ibar').style.display=ch==='voice'?'none':'flex';
+}
+
+function swP(name,idx){
+  closeSettings();
+  currentPanelIdx=idx;
+  const pid='p-'+name;
+
+  // If the clicked tab is currently floating, dock it back then show it
+  if(floats[pid]){ dockPanel(pid); }
+
+  // Hide only panels that are NOT floating and are in the right panel
+  panels.forEach(p=>{
+    const e=document.getElementById('p-'+p);
+    if(e && !floats['p-'+p]) e.style.display='none';
+  });
+
+  // Show the target panel only if it's in the right panel (not floating)
+  const el=document.getElementById(pid);
+  if(el && !floats[pid]) el.style.display='block';
+
+  // Update active tab highlight
+  document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('act'));
+  const tabs=document.querySelectorAll('.ptab');
+  if(tabs[idx]) tabs[idx].classList.add('act');
+
+  updatePopoutBtn();
+}
+
+function selQ(i,el,type){
+  // Single-select: deselect all, select clicked
+  document.querySelectorAll('.qc').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+
+  closeOutcomeMenu();
+
+  if(type==='email'){
+    // Update case ID and subtitle
+    document.getElementById('case-id-display').textContent='#CS-2024-09042';
+    document.getElementById('case-sub-display').textContent='David Patel · Invoice Dispute · Priority: Medium';
+    // Swap controls
+    document.getElementById('voice-ctrls').style.display='none';
+    document.getElementById('email-ctrls').style.display='flex';
+    // Switch channel tabs to email, show email body
+    const emailTab=document.querySelectorAll('.cht')[1];
+    swCh('email',emailTab);
+    // Hide channel tabs (not relevant for email case)
+    document.querySelector('.chtabs').style.display='none';
+    document.getElementById('ibar').style.display='flex';
+  } else if(type==='voice'){
+    document.getElementById('case-id-display').textContent='#CS-2024-08917';
+    document.getElementById('case-sub-display').textContent='Margaret Chen · Billing Inquiry · Priority: High';
+    document.getElementById('voice-ctrls').style.display='flex';
+    document.getElementById('email-ctrls').style.display='none';
+    document.querySelector('.chtabs').style.display='flex';
+    // Switch to voice view
+    const voiceTab=document.querySelectorAll('.cht')[0];
+    swCh('voice',voiceTab);
+    document.getElementById('ibar').style.display='none';
+  } else if(type==='chat'){
+    document.getElementById('case-id-display').textContent='#CS-2024-08831';
+    document.getElementById('case-sub-display').textContent='Aisha Williams · Tech Support · Priority: Medium';
+    document.getElementById('voice-ctrls').style.display='none';
+    document.getElementById('email-ctrls').style.display='flex';
+    const chatTab=document.querySelectorAll('.cht')[2];
+    swCh('chat',chatTab);
+    document.querySelector('.chtabs').style.display='none';
+    document.getElementById('ibar').style.display='flex';
+  } else {
+    // other
+    document.getElementById('voice-ctrls').style.display='flex';
+    document.getElementById('email-ctrls').style.display='none';
+    document.querySelector('.chtabs').style.display='flex';
+  }
+}
+
+function showOutcomeMenu(btn){
+  const menu=document.getElementById('outcome-menu');
+  if(menu.style.display==='block'){closeOutcomeMenu();return;}
+  menu.style.display='block';
+}
+
+function closeOutcomeMenu(){
+  document.getElementById('outcome-menu').style.display='none';
+}
+
+function pickOutcome(label){
+  closeOutcomeMenu();
+  const btn=document.querySelector('.outcome-btn');
+  btn.style.background='#f0fdf4';
+  btn.style.borderColor='#22c55e';
+  btn.style.color='#15803d';
+  btn.innerHTML=`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> ${label}`;
+}
+
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.outcome-btn')&&!e.target.closest('#outcome-menu')) closeOutcomeMenu();
+});
+
+let secs=287,ended=false;
+function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+document.getElementById('ctimer').textContent=fmt(secs);
+setInterval(()=>{if(!ended){secs++;document.getElementById('ctimer').textContent=fmt(secs);}},1000);
+
+function togMute(){
+  const b=document.getElementById('btn-mute');
+  const on=b.classList.toggle('mt');
+  b.innerHTML=on
+    ?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Unmute'
+    :'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Mute';
+}
+
+function togHold(){
+  const b=document.getElementById('btn-hold');
+  const on=b.classList.toggle('hd');
+  b.innerHTML=on
+    ?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg> Resume'
+    :'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Hold';
+}
+
+function endCall(){
+  ended=true;
+  const t=document.getElementById('ctimer');
+  t.classList.add('done');
+  ['btn-mute','btn-hold','btn-end'].forEach(id=>{
+    const b=document.getElementById(id);
+    if(b)b.disabled=true;
+  });
+  swP('cust',0);
+  const vv=document.getElementById('vv');
+  const div=document.createElement('div');
+  div.style.cssText='text-align:center;background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:9px 12px;font-size:12px;color:#991b1b;font-weight:700;margin-top:8px';
+  div.textContent='Call ended · '+fmt(secs)+' · Complete wrap-up to close case';
+  vv.appendChild(div);
+}
+
+const dir=[
+  {i:'SK',n:'Sarah Kim',d:'Billing Team Lead',bg:'#dbeafe',tc:'#1d4ed8'},
+  {i:'TR',n:'Tom Rivera',d:'Account Management',bg:'#dcfce7',tc:'#15803d'},
+  {i:'LP',n:'Lisa Park',d:'Technical Support L2',bg:'#ede9fe',tc:'#5b21b6'},
+  {i:'MB',n:'Mike Brown',d:'Supervisor · Floor',bg:'#fee2e2',tc:'#991b1b'},
+  {i:'AJ',n:'Amara Johnson',d:'Finance / Billing',bg:'#fef9c3',tc:'#854d0e'},
+  {i:'RC',n:'Ryan Chen',d:'Technical Support L1',bg:'#dbeafe',tc:'#1d4ed8'},
+  {i:'NW',n:'Nina Walker',d:'Customer Success',bg:'#dcfce7',tc:'#15803d'},
+  {i:'DM',n:'David Martinez',d:'QA Supervisor',bg:'#ede9fe',tc:'#5b21b6'},
+];
+
+function rendDir(q=''){
+  const f=q?dir.filter(d=>d.n.toLowerCase().includes(q.toLowerCase())||d.d.toLowerCase().includes(q.toLowerCase())):dir;
+  document.getElementById('dlist').innerHTML=f.map(d=>`
+    <div class="di">
+      <div class="dav" style="background:${d.bg};color:${d.tc}">${d.i}</div>
+      <div class="dinfo"><div class="dn">${d.n}</div><div class="dd">${d.d}</div></div>
+      <div class="dacts">
+        <button class="da" title="Call"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.67-.36 1-.22 1.1.44 2.3.62 3.6.62.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C8.6 21 3 15.4 3 8.6c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.22 2.5.62 3.6a1 1 0 0 1-.25 1.02z"/></svg></button>
+        <button class="da" title="Message"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+      </div>
+    </div>`).join('');
+}
+
+// Company directory (Brightfield Solutions)
+const companyDir=[
+  {i:'MC',n:'Margaret Chen',t:'VP Operations',d:'Operations',ph:'+1 (415) 555-0193',em:'m.chen@brightfield.io',bg:'#dbeafe',tc:'#1d4ed8'},
+  {i:'RH',n:'Robert Huang',t:'Chief Executive Officer',d:'Operations',ph:'+1 (415) 555-0100',em:'r.huang@brightfield.io',bg:'#ede9fe',tc:'#5b21b6'},
+  {i:'SV',n:'Shreya Verma',t:'Chief Financial Officer',d:'Finance',ph:'+1 (415) 555-0141',em:'s.verma@brightfield.io',bg:'#fef9c3',tc:'#854d0e'},
+  {i:'JP',n:'James Park',t:'Director of Finance',d:'Finance',ph:'+1 (415) 555-0155',em:'j.park@brightfield.io',bg:'#fef9c3',tc:'#854d0e'},
+  {i:'LO',n:'Lena Okafor',t:'Head of Procurement',d:'Finance',ph:'+1 (415) 555-0162',em:'l.okafor@brightfield.io',bg:'#fef9c3',tc:'#854d0e'},
+  {i:'DK',n:'Daniel Kim',t:'Chief Technology Officer',d:'Engineering',ph:'+1 (415) 555-0177',em:'d.kim@brightfield.io',bg:'#dcfce7',tc:'#15803d'},
+  {i:'AT',n:'Anika Torres',t:'Senior Engineer',d:'Engineering',ph:'+1 (415) 555-0183',em:'a.torres@brightfield.io',bg:'#dcfce7',tc:'#15803d'},
+  {i:'PW',n:'Paul Whitfield',t:'General Counsel',d:'Legal',ph:'+1 (415) 555-0190',em:'p.whitfield@brightfield.io',bg:'#fee2e2',tc:'#991b1b'},
+  {i:'NB',n:'Nia Baptiste',t:'Contracts Manager',d:'Legal',ph:'+1 (415) 555-0196',em:'n.baptiste@brightfield.io',bg:'#fee2e2',tc:'#991b1b'},
+];
+let activeDept='All';
+
+function rendCompDir(q='',dept='All'){
+  let list=companyDir;
+  if(dept!=='All') list=list.filter(c=>c.d===dept);
+  if(q) list=list.filter(c=>c.n.toLowerCase().includes(q.toLowerCase())||c.t.toLowerCase().includes(q.toLowerCase())||c.d.toLowerCase().includes(q.toLowerCase()));
+  document.getElementById('compdir-list').innerHTML=list.map(c=>`
+    <div class="di">
+      <div class="dav" style="background:${c.bg};color:${c.tc}">${c.i}</div>
+      <div class="dinfo">
+        <div class="dn">${c.n}</div>
+        <div class="dd">${c.t} · ${c.d}</div>
+      </div>
+      <div class="dacts">
+        <button class="da" title="Call ${c.ph}"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.27-.27.67-.36 1-.22 1.1.44 2.3.62 3.6.62.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C8.6 21 3 15.4 3 8.6c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.22 2.5.62 3.6a1 1 0 0 1-.25 1.02z"/></svg></button>
+        <button class="da" title="Email ${c.em}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg></button>
+      </div>
+    </div>`).join('')||`<div style="padding:24px 16px;text-align:center;font-size:12px;color:#94a3b8">No contacts found</div>`;
+}
+rendCompDir();
+function filtCompDir(v){rendCompDir(v,activeDept);}
+function filtCompDept(dept,btn){
+  activeDept=dept;
+  document.querySelectorAll('.cdf').forEach(b=>b.classList.remove('act'));
+  btn.classList.add('act');
+  rendCompDir(document.getElementById('compdir-search').value,dept);
+}
+
+// ── Floating panels ──────────────────────────────────────────────────────
+const panelNames = {
+  'p-cust':'Customer Profile','p-ai':'AI Assist','p-hist':'Interaction History',
+  'p-compdir':'Company Directory','p-dir':'Internal Directory','p-screen':'Co-browse'
+};
+const floats = {}; // keyed by panel id
+
+function popOutPanel(){
+  // Find the currently active panel
+  const activePg = document.querySelector('#right-panel .pcontent > div[id^="p-"]:not([style*="display:none"])');
+  if(!activePg) return;
+  const pid = activePg.id;
+  // Already floating? Dock it back instead
+  if(floats[pid]){ dockPanel(pid); return; }
+  floatPanel(pid);
+}
+
+function floatPanel(pid){
+  const el = document.getElementById(pid);
+  if(!el || floats[pid]) return;
+  const title = panelNames[pid] || 'Panel';
+
+  // Build the floating window
+  const fp = document.createElement('div');
+  fp.className = 'float-panel';
+  fp.id = 'float-' + pid;
+  fp.style.cssText = 'width:360px;height:520px;top:80px;left:' + (200 + Object.keys(floats).length * 30) + 'px';
+  fp.innerHTML = `
+    <div class="float-chrome" id="float-chrome-${pid}">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/><line x1="8" y1="8" x2="16" y2="8"/></svg>
+      <span class="float-chrome-title">${title}</span>
+      <button class="float-chrome-btn dock" onclick="dockPanel('${pid}')" title="Dock back to panel">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9,21 3,21 3,15"/><line x1="3" y1="21" x2="10" y2="14"/><path d="M14 20h6a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v6"/></svg>
+      </button>
+      <button class="float-chrome-btn cls" onclick="closeFloat('${pid}')" title="Close">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="float-body" id="float-body-${pid}"></div>`;
+
+  document.getElementById('float-panel-container').appendChild(fp);
+
+  // Move the panel content into the float, always visible there
+  const body = document.getElementById('float-body-' + pid);
+  body.appendChild(el);
+  el.style.display = 'block';
+
+  floats[pid] = fp;
+  makeDraggable(fp, document.getElementById('float-chrome-' + pid));
+  bringToFront(fp);
+
+  // Auto-switch the right panel to the next non-floating tab
+  const nextIdx = panels.findIndex(p => !floats['p-'+p] && 'p-'+p !== pid);
+  if(nextIdx !== -1) swP(panels[nextIdx], nextIdx);
+
+  updatePopoutBtn();
+}
+
+function dockPanel(pid){
+  const fp = floats[pid];
+  if(!fp) return;
+  const el = document.getElementById(pid);
+  const pcontent = document.querySelector('#right-panel .pcontent');
+
+  // Move content back into the right panel, hidden by default
+  el.style.display = 'none';
+  pcontent.appendChild(el);
+
+  fp.remove();
+  delete floats[pid];
+
+  // Show this panel in the right panel and activate its tab
+  const name = pid.replace('p-','');
+  const idx = panels.indexOf(name);
+  if(idx !== -1) swP(name, idx);
+}
+
+function closeFloat(pid){
+  // Closing = dock back silently
+  dockPanel(pid);
+}
+
+function bringToFront(fp){
+  document.querySelectorAll('.float-panel').forEach(f=>f.style.zIndex='400');
+  fp.style.zIndex='401';
+}
+
+function makeDraggable(panel, handle){
+  let ox=0,oy=0,dragging=false;
+  handle.addEventListener('mousedown',function(e){
+    if(e.target.closest('button')) return;
+    dragging=true;
+    ox=e.clientX-panel.offsetLeft;
+    oy=e.clientY-panel.offsetTop;
+    bringToFront(panel);
+    document.body.style.userSelect='none';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!dragging)return;
+    panel.style.left=Math.max(0,e.clientX-ox)+'px';
+    panel.style.top=Math.max(0,e.clientY-oy)+'px';
+    panel.style.right='auto';
+    panel.style.bottom='auto';
+  });
+  document.addEventListener('mouseup',function(){
+    dragging=false;
+    document.body.style.userSelect='';
+  });
+}
+
+function updatePopoutBtn(){
+  const btn=document.getElementById('panel-popout-btn');
+  if(!btn)return;
+  const activePg=document.querySelector('#right-panel .pcontent > div[id^="p-"]:not([style*="display:none"])');
+  if(activePg && floats[activePg.id]){
+    btn.querySelector('span').textContent='Dock';
+    btn.style.background='#eff6ff';
+    btn.style.borderColor='#93c5fd';
+    btn.style.color='#1d4ed8';
+  } else {
+    btn.querySelector('span').textContent='Float';
+    btn.style.background='';
+    btn.style.borderColor='';
+    btn.style.color='';
+  }
+}
+
+// Track current panel idx for dockPanel restore
+let currentPanelIdx=0;
+const _origSwP=swP;
+// Patch swP to track current panel
+
+// Panel expand / collapse
+let panelExpanded=false;
+let savedPanelWidth=null;
+function togExpand(){
+  const panel=document.getElementById('right-panel');
+  const main=document.querySelector('.workspace-body .main');
+  const resizer=document.getElementById('panel-resizer');
+  const btn=document.getElementById('panel-expand-btn');
+  const icon=document.getElementById('expand-icon');
+  panelExpanded=!panelExpanded;
+  if(panelExpanded){
+    savedPanelWidth=panel.style.width||'800px';
+    panel.style.width='';
+    panel.classList.add('expanded');
+    main.classList.add('hidden');
+    resizer.style.display='none';
+    btn.classList.add('active');
+    btn.title='Collapse panel';
+    document.getElementById('expand-label').textContent='Collapse';
+    icon.innerHTML='<polyline points="4,14 4,20 10,20"/><polyline points="20,10 20,4 14,4"/><line x1="4" y1="20" x2="11" y2="13"/><line x1="20" y1="4" x2="13" y2="11"/>';
+  } else {
+    panel.classList.remove('expanded');
+    panel.style.width=savedPanelWidth;
+    main.classList.remove('hidden');
+    resizer.style.display='';
+    btn.classList.remove('active');
+    btn.title='Expand panel';
+    document.getElementById('expand-label').textContent='Expand';
+    icon.innerHTML='<polyline points="15,3 21,3 21,9"/><polyline points="9,21 3,21 3,15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>';
+  }
+}
+
+// Resizable right panel
+(function(){
+  const panel=document.getElementById('right-panel');
+  const resizer=document.getElementById('panel-resizer');
+  let startX,startW,dragging=false;
+
+  resizer.addEventListener('mousedown',function(e){
+    dragging=true;
+    startX=e.clientX;
+    startW=panel.offsetWidth;
+    resizer.classList.add('dragging');
+    document.body.style.cursor='col-resize';
+    document.body.style.userSelect='none';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove',function(e){
+    if(!dragging)return;
+    const delta=startX-e.clientX;
+    const newW=Math.min(2000,Math.max(220,startW+delta));
+    panel.style.width=newW+'px';
+  });
+
+  document.addEventListener('mouseup',function(){
+    if(!dragging)return;
+    dragging=false;
+    resizer.classList.remove('dragging');
+    document.body.style.cursor='';
+    document.body.style.userSelect='';
+  });
+})();
+</script>
+
+
+
+<script>
+function openSettings(){
+  document.getElementById('settings-overlay').classList.add('open');
+}
+function closeSettings(){
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+
+// Also allow Ctrl+, to open settings
+document.addEventListener('keydown',function(e){
+  if((e.ctrlKey||e.metaKey)&&e.key===','){e.preventDefault();openSettings();}
+  if(e.key==='Escape') closeSettings();
+});
+
+const stgPages=['audio','ringtone','keyboard','display','notifications','email','chat','voice','profile','privacy'];
+function swStg(name,el){
+  stgPages.forEach(p=>{
+    const pg=document.getElementById('stg-'+p);
+    if(pg) pg.classList.toggle('act',p===name);
+  });
+  document.querySelectorAll('.stg-item').forEach(i=>i.classList.remove('act'));
+  el.classList.add('act');
+}
+</script>
+
+<!-- Floating panel container (populated by JS) -->
+<div id="float-panel-container"></div>
+</body>
+</html>
